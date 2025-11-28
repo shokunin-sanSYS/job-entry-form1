@@ -185,20 +185,26 @@
     }
 
     // カード描画
-    function renderChoices(containerId, items){
-      const wrap = document.getElementById(containerId);
-      wrap.innerHTML = '';
-      items.forEach((item)=>{
-        const btn = document.createElement('button');
-        btn.type = 'button'; btn.className = 'choice';
-        btn.setAttribute('role','button'); btn.setAttribute('aria-pressed','false');
-        btn.dataset.value = item.label;
-        btn.innerHTML = `<img alt="" src="${item.icon}"><span>${item.label}</span>`;
-        btn.addEventListener('click', ()=> toggleChoice(btn));
-        btn.addEventListener('keydown', (e)=> handleChoiceKeydown(e, wrap));
-        wrap.appendChild(btn);
-      });
-    }
+function renderChoices(containerId, items){
+  const wrap = document.getElementById(containerId);
+  wrap.innerHTML = '';
+  items.forEach((item)=>{
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'choice';
+    btn.setAttribute('role','button');
+    btn.setAttribute('aria-pressed','false');
+    btn.dataset.value = item.label;
+
+    btn.innerHTML =
+      (item.icon ? `<img alt="" src="${item.icon}">` : '') +
+      `<span>${item.label}</span>`;
+
+    btn.addEventListener('click', ()=> toggleChoice(btn));
+    btn.addEventListener('keydown', (e)=> handleChoiceKeydown(e, wrap));
+    wrap.appendChild(btn);
+  });
+}
     function toggleChoice(el){
       const pressed = el.getAttribute('aria-pressed') === 'true';
       el.setAttribute('aria-pressed', String(!pressed));
