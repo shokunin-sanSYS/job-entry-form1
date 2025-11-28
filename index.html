@@ -18,11 +18,11 @@
       max-height:92vh; 
       overflow-y:auto;
       -webkit-overflow-scrolling: touch; /* iOSでスムーズなスクロール */
-      position:relative; 
+      positions:relative; 
     }
 
     /* 上部中央にステッパー */
-    .header{ position:sticky; top:0; background:var(--card); z-index:10; padding:12px 0; border-bottom:1px solid #eef0f3; display:flex; justify-content:center; }
+    .header{ positions:sticky; top:0; background:var(--card); z-index:10; padding:12px 0; border-bottom:1px solid #eef0f3; display:flex; justify-content:center; }
     .stepper{ display:flex; align-items:center; gap:8px; }
     .stepper .label{ font-weight:700; letter-spacing:.04em; color:#394150; }
     .dot{ width:28px; height:28px; border-radius:999px; display:grid; place-items:center; font-size:.9rem; font-weight:700; }
@@ -85,7 +85,7 @@
       <section class="step active" id="step1" aria-labelledby="s1-title">
         <h2 id="s1-title">ご希望の職種を選択</h2>
         <p class="hint">複数選択可。</p>
-        <div class="card-grid" id="position" role="group" aria-label="希望職種"></div>
+        <div class="card-grid" id="positions" role="group" aria-label="希望職種"></div>
         <div id="s1-error" class="error-text" aria-live="polite"></div>
         <div class="controls">
           <button type="button" class="btn" id="to2">次へ</button>
@@ -142,7 +142,7 @@
         </div>
       </section>
 
-      <input type="hidden" name="position_text" id="position_text">
+      <input type="hidden" name="positions_text" id="positions_text">
       <input type="hidden" name="experience_text" id="experience_text">
     </form>
   </div>
@@ -156,7 +156,7 @@
     const THANKS_URL = 'https://shokunin-san-com.studio.site/job-thanks';
 
     // ---- 選択肢データ ----
-    const position = [
+    const positions = [
       {label:'わからない・相談して決めたい', icon:'https://storage.googleapis.com/studio-design-asset-files/projects/xNWY3vy4ql/s-500x500_3b8224d2-7113-4fab-89f6-74fc569a7917.webp'},
       {label:'施工管理', icon:'https://storage.googleapis.com/studio-design-asset-files/projects/xNWY3vy4ql/s-500x500_2063ca8c-231e-4f6e-8821-234638a5fcea.webp'},
       {label:'建築士・設計士', icon:'https://storage.googleapis.com/studio-design-asset-files/projects/xNWY3vy4ql/s-500x500_c398c0a4-6699-4da3-8c01-e78862065fe5.webp'},
@@ -226,9 +226,9 @@ function renderChoices(containerId, items){
       return Array.from(document.querySelectorAll(`#${containerId} .choice[aria-pressed="true"]`)).map(b=>b.dataset.value);
     }
     function syncHiddenTexts(){
-      const q = document.getElementById('position_text');
+      const q = document.getElementById('positions_text');
       const p = document.getElementById('experience_text');
-      if(q) q.value = getSelectedTexts('position').join(', ');
+      if(q) q.value = getSelectedTexts('positions').join(', ');
       if(p) p.value = getSelectedTexts('experience').join(', ');
     }
 
@@ -241,13 +241,13 @@ function renderChoices(containerId, items){
 
     // 初期化
     renderStepper();
-    renderChoices('position', position);
+    renderChoices('positions', positions);
     renderChoices('experience', experience);
     setStep(0);
 
     // ステップ遷移（簡易）
     document.getElementById('to2').addEventListener('click', ()=>{ 
-      const sel = getSelectedTexts('position');
+      const sel = getSelectedTexts('positions');
       document.getElementById('s1-error').textContent = '';
       if(sel.length>0){ 
         setStep(1); 
@@ -289,7 +289,7 @@ function renderChoices(containerId, items){
 
       // 送信データを作成(シートの列に合わせる)
       const payload = {
-        position: document.getElementById('position_text').value,
+        positions: document.getElementById('positions_text').value,
         experience:      document.getElementById('experience_text').value,
         birthyear:      document.getElementById('birthyear').value,
         name:           document.getElementById('name').value.trim(),
