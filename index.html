@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>ステップフォーム</title>
+  <style>
+    :root{ --brand:#2175cf; --bg:#f6f9fd; --card:#fff; --text:#111; --muted:#667085; --danger:#d92d20; }
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{ margin:0; background:var(--bg); color:var(--text); font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; display:grid; place-items:center; padding:16px; }
+    .form-container{ 
+      width:min(960px,100%); 
+      background:var(--card); 
+      border-radius:16px; 
+      box-shadow:0 6px 28px rgba(2,6,23,.08); 
+      padding:clamp(16px,2vw + 8px,28px); 
+      max-height:92vh; 
+      overflow-y:auto;
+      -webkit-overflow-scrolling: touch; /* iOSでスムーズなスクロール */
+      position:relative; 
+    }
+
+    /* 上部中央にステッパー */
+    .header{ position:sticky; top:0; background:var(--card); z-index:10; padding:12px 0; border-bottom:1px solid #eef0f3; display:flex; justify-content:center; }
+    .stepper{ display:flex; align-items:center; gap:8px; }
+    .stepper .label{ font-weight:700; letter-spacing:.04em; color:#394150; }
+    .dot{ width:28px; height:28px; border-radius:999px; display:grid; place-items:center; font-size:.9rem; font-weight:700; }
+    .dot.pending{ background:#e9eef5; color:#9aa6b2; }
+    .dot.current{ background:var(--brand); color:#fff; }
+    .dot.done{ background:#cfe3ff; color:#1b4dd6; }
+
+    .step{ display:none; }
+    .step.active{ display:block; }
+
+    .hint{ color:var(--muted); font-size:.95rem; margin:.25rem 0 1rem; }
+
+    .card-grid{ display:grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap:12px; margin-top:8px; }
+    @media (max-width: 768px){ .card-grid{ grid-template-columns:1fr; } }
+
+    .choice{ display:flex; align-items:center; gap:12px; width:100%; border:2px solid #e5e7eb; border-radius:14px; padding:14px 16px; background:#fff; cursor:pointer; text-align:left; transition:border-color .2s, box-shadow .2s, background .2s; }
+    .choice[aria-pressed="true"], .choice:where(:focus-visible){ border-color:#1b4dd6; box-shadow:0 0 0 3px rgba(27,77,214,.15); background:#f0f6ff; }
+    .choice img{ width:32px; height:32px; object-fit:contain; flex:0 0 auto; }
+
+    label{ display:block; font-weight:600; margin:12px 0 6px; }
+    input[type="text"], input[type="tel"], input[type="email"], select{ width:100%; padding:12px 14px; border:1px solid #d1d5db; border-radius:10px; font-size:1rem; transition:border-color .2s, box-shadow .2s; background:#fff; }
+    input:focus-visible, select:focus-visible{ outline:none; border-color:#1b4dd6; box-shadow:0 0 0 3px rgba(27,77,214,.15); }
+
+    .error{ border-color: var(--danger) !important; box-shadow: 0 0 0 3px rgba(217,45,32,.1) !important; }
+    .error-text{ color: var(--danger); margin-top: 6px; font-size: .9rem; }
+
+    .controls{ display:flex; gap:12px; margin-top: 12px; padding-bottom: 16px; }
+    .btn{ flex:1; appearance:none; border:0; border-radius:12px; padding:14px 16px; font-size:1rem; background:#1b4dd6; color:#fff; cursor:pointer; font-weight:600; }
+    .btn.secondary{ background:#e7eefc; color:#183572; }
+
+    /* --- モバイル(幅≤390px)のコンパクト調整 --- */
+    @media (max-width: 390px){
+      body{ padding:0; }
+      .form-container{ 
+        border-radius:0; 
+        max-height:100vh;
+        max-height:100dvh; /* dynamic viewport height */
+        padding:12px; 
+        width:100%;
+      }
+      .header{ padding:8px 0; }
+      h2{ font-size:1.1rem; margin:8px 0; }
+      .hint{ font-size:.85rem; margin:.2rem 0 .6rem; }
+      .card-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; margin-top:4px; }
+      .choice{ padding:10px 12px; min-height:44px; }
+      .choice img{ width:24px; height:24px; }
+      .controls{ margin-top:8px; padding-bottom:12px; }
+      .btn{ padding:12px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="form-container">
+    <div class="header">
+      <nav class="stepper" id="stepper" aria-label="ステップ"></nav>
+    </div>
+
+    <form id="stepForm" novalidate>
+      <!-- STEP 1 -->
+      <section class="step active" id="step1" aria-labelledby="s1-title">
+        <h2 id="s1-title">ご希望の職種を選択</h2>
+        <p class="hint">複数選択可。</p>
+        <div class="card-grid" id="position" role="group" aria-label="希望職種"></div>
+        <div id="s1-error" class="error-text" aria-live="polite"></div>
+        <div class="controls">
+          <button type="button" class="btn" id="to2">次へ</button>
+        </div>
+      </section>
+
+      <!-- STEP 2 -->
+      <section class="step" id="step2" aria-labelledby="s2-title">
+        <h2 id="s2-title">建設業界の経験年数</h2>
+        <p class="hint"></p>
+        <div class="card-grid" id="experience" role="group" aria-label="経験年数"></div>
+        <div id="s2-error" class="error-text" aria-live="polite"></div>
+        <div class="controls">
+          <button type="button" class="btn secondary" data-prev="1">戻る</button>
+          <button type="button" class="btn" id="to3">次へ</button>
+        </div>
+      </section>
+
+      <!-- STEP 3 -->
+      <section class="step" id="step3" aria-labelledby="s3-title">
+        <h2 id="s3-title">お名前と生年を入力</h2>
+        <label for="name">お名前</label>
+        <input type="text" id="name" name="name" autocomplete="name" placeholder="例:山田 太郎" required>
+        <div id="name-error" class="error-text" aria-live="polite"></div>
+
+        <label for="birthyear">生年</label>
+        <select id="birthyear" name="birthyear" required>
+          <option value="">選択してください</option>
+        </select>
+        <div id="year-error" class="error-text" aria-live="polite"></div>
+
+        <div class="controls">
+          <button type="button" class="btn secondary" data-prev="2">戻る</button>
+          <button type="button" class="btn" id="to4">次へ</button>
+        </div>
+      </section>
+
+      <!-- STEP 4 -->
+      <section class="step" id="step4" aria-labelledby="s4-title">
+        <h2 id="s4-title">連絡先を入力</h2>
+        <p class="hint">担当者よりご連絡させて頂きます</p>
+        <label for="tel">電話番号(ハイフン不要)</label>
+        <input type="tel" id="tel" name="tel" inputmode="numeric" pattern="^0\\d{9,10}$" placeholder="例:09012345678" required>
+        <div class="hint">固定:10桁 / 携帯:11桁。0から始まる数字のみ。</div>
+        <div id="tel-error" class="error-text" aria-live="polite"></div>
+
+        <label for="email">メールアドレス</label>
+        <input type="email" id="email" name="email" autocomplete="email" placeholder="you@example.com" required>
+        <div id="email-error" class="error-text" aria-live="polite"></div>
+
+        <div class="controls">
+          <button type="button" class="btn secondary" data-prev="3">戻る</button>
+          <button type="submit" class="btn" id="submitBtn">送信</button>
+        </div>
+      </section>
+
+      <input type="hidden" name="position_text" id="position_text">
+      <input type="hidden" name="experience_text" id="experience_text">
+    </form>
+  </div>
+
+  <script>
+  (()=>{
+    'use strict';
+
+    // ---- 設定 ----
+    const GAS_URL    = 'https://script.google.com/macros/s/AKfycbwDIJOlIeh78ddj4zDdx5QgICWm747EELQ5xoVtr3qiEr5ujfgko5JfJBazW7tDkAe6nA/exec';
+    const THANKS_URL = 'https://shokunin-san-com.studio.site/job-thanks';
+
+    // ---- 選択肢データ ----
+    const position = [
+      {label:'わからない・相談して決めたい', icon:'https://storage.googleapis.com/studio-design-asset-files/projects/xNWY3vy4ql/s-500x500_webp_fa0ae401-eb08-49e4-b5ab-93f43976e9d6.png'},
+      {label:'施工管理', icon:'https://storage.googleapis.com/studio-design-asset-files/projects/xNWY3vy4ql/s-500x500_webp_83725fb9-fe23-4cb7-85af-21b08701a9ad.png'},
+      {label:'建築士・設計士', icon:'https://storage.googleapis.com/studio-design-asset-files/projects/xNWY3vy4ql/s-500x500_webp_7a3b6db3-df63-4868-b6e9-548f4155d634.png'},
+      {label:'現場作業員・職人', icon:'https://storage.googleapis.com/studio-design-asset-files/projects/xNWY3vy4ql/s-500x500_webp_a78db866-5810-497b-a217-909bd861e6ba.png'}
+    ];
+    const experience = [
+      {label:'未経験', icon:'https://storage.googleapis.com/studio-design-asset-files/projects/xNWY3vy4ql/s-500x500_webp_0004cdf1-c0e2-45ab-a9d6-62a0a005a16e.png'},
+      {label:'1年未満', icon:'https://storage.googleapis.com/studio-design-asset-files/projects/xNWY3vy4ql/s-500x500_webp_f54833bc-280e-457d-8ac5-70437788b99b.png'},
+      {label:'1～5年未満', icon:'https://storage.googleapis.com/studio-design-asset-files/projects/xNWY3vy4ql/s-500x500_webp_3f21af0a-55f9-4411-82c2-2f45df860a36.png'},
+      {label:'5年以上', icon:'https://storage.googleapis.com/studio-design-asset-files/projects/xNWY3vy4ql/s-500x500_webp_8f910a96-eeba-4bb6-bd9b-8299ae24166c.png'}
+    ];
+
+    const steps = Array.from(document.querySelectorAll('.step'));
+
+    // ステッパー
+    function renderStepper(){
+      const nav = document.getElementById('stepper');
+      nav.innerHTML = '<span class="label">STEP</span>' + steps.map((_,i)=>`<span class="dot pending" data-step="${i}">${i+1}</span>`).join('');
+    }
+    function updateStepper(n){
+      document.querySelectorAll('.dot').forEach((d,i)=>{
+        d.classList.remove('pending','current','done');
+        d.classList.add(i<n ? 'done' : (i===n ? 'current' : 'pending'));
+        d.setAttribute('aria-current', i===n ? 'step' : 'false');
+      });
+    }
+
+    // カード描画
+    function renderChoices(containerId, items){
+      const wrap = document.getElementById(containerId);
+      wrap.innerHTML = '';
+      items.forEach((item)=>{
+        const btn = document.createElement('button');
+        btn.type = 'button'; btn.className = 'choice';
+        btn.setAttribute('role','button'); btn.setAttribute('aria-pressed','false');
+        btn.dataset.value = item.label;
+        btn.innerHTML = `<img alt="" src="${item.icon}"><span>${item.label}</span>`;
+        btn.addEventListener('click', ()=> toggleChoice(btn));
+        btn.addEventListener('keydown', (e)=> handleChoiceKeydown(e, wrap));
+        wrap.appendChild(btn);
+      });
+    }
+    function toggleChoice(el){
+      const pressed = el.getAttribute('aria-pressed') === 'true';
+      el.setAttribute('aria-pressed', String(!pressed));
+      el.classList.toggle('active', !pressed);
+      syncHiddenTexts();
+    }
+    function handleChoiceKeydown(e, container){
+      const items = Array.from(container.querySelectorAll('.choice'));
+      const idx = items.indexOf(e.currentTarget);
+      if(['ArrowRight','ArrowDown'].includes(e.key)){
+        e.preventDefault(); items[Math.min(idx+1, items.length-1)].focus();
+      } else if(['ArrowLeft','ArrowUp'].includes(e.key)){
+        e.preventDefault(); items[Math.max(idx-1, 0)].focus();
+      } else if(e.key === 'Enter' || e.key === ' '){
+        e.preventDefault(); e.currentTarget.click();
+      }
+    }
+    function getSelectedTexts(containerId){
+      return Array.from(document.querySelectorAll(`#${containerId} .choice[aria-pressed="true"]`)).map(b=>b.dataset.value);
+    }
+    function syncHiddenTexts(){
+      const q = document.getElementById('position_text');
+      const p = document.getElementById('experience_text');
+      if(q) q.value = getSelectedTexts('position').join(', ');
+      if(p) p.value = getSelectedTexts('experience').join(', ');
+    }
+
+    function setStep(n){ 
+      steps.forEach((s,i)=> s.classList.toggle('active', i===n)); 
+      updateStepper(n);
+      // ステップ変更時にトップまでスクロール
+      document.querySelector('.form-container').scrollTo({top: 0, behavior: 'smooth'});
+    }
+
+    // 初期化
+    renderStepper();
+    renderChoices('position', position);
+    renderChoices('experience', experience);
+    setStep(0);
+
+    // ステップ遷移（簡易）
+    document.getElementById('to2').addEventListener('click', ()=>{ 
+      const sel = getSelectedTexts('position');
+      document.getElementById('s1-error').textContent = '';
+      if(sel.length>0){ 
+        setStep(1); 
+      } else { 
+        document.getElementById('s1-error').textContent='少なくとも1つ選択してください。'; 
+      }
+    });
+    document.getElementById('to3').addEventListener('click', ()=>{ 
+      const sel = getSelectedTexts('experience');
+      document.getElementById('s2-error').textContent = '';
+      if(sel.length>0){ 
+        setStep(2); 
+      } else { 
+        document.getElementById('s2-error').textContent='少なくとも1つ選択してください。'; 
+      }
+    });
+    document.getElementById('to4').addEventListener('click', ()=>{ setStep(3); });
+    document.querySelectorAll('[data-prev]').forEach(btn=> btn.addEventListener('click', ()=> setStep(Number(btn.dataset.prev)-1)) );
+
+    // 生年オプション
+    (function fillYears(){
+      const select = document.getElementById('birthyear'); if(!select) return;
+      const y = new Date().getFullYear();
+      for(let i=y-16; i>=y-80; i--){ const opt=document.createElement('option'); opt.value=String(i); opt.textContent=i+'年'; select.appendChild(opt); }
+    })();
+
+    // ---- 送信＆リダイレクト ----
+    function goThanks(){
+      try{
+        // 親フレームごと遷移(戻るで再送信を防ぐ)
+        window.top.location.replace(THANKS_URL);
+      }catch(_){
+        window.location.assign(THANKS_URL);
+      }
+    }
+
+    document.getElementById('stepForm').addEventListener('submit', async function(e){
+      e.preventDefault();
+
+      // 送信データを作成(シートの列に合わせる)
+      const payload = {
+        position: document.getElementById('position_text').value,
+        experience:      document.getElementById('experience_text').value,
+        birthyear:      document.getElementById('birthyear').value,
+        name:           document.getElementById('name').value.trim(),
+        tel:            document.getElementById('tel').value.trim(),
+        email:          document.getElementById('email').value.trim()
+      };
+
+      try{
+        await fetch(GAS_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+      }catch(err){
+        console.error('送信エラー', err);
+        // 失敗してもユーザー体験を優先してサンクスへ
+      }finally{
+        goThanks();
+      }
+    });
+
+  })();
+  </script>
+</body>
+</html>
